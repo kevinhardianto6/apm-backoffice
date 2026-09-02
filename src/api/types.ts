@@ -206,6 +206,18 @@ export interface NetworkResponse {
 
 export type SessionOutcome = 'crashed' | 'errors' | 'clean'
 
+// 01 §4.5.1 / §10. Breadcrumbs live in a device-side ring buffer and ride along ONLY on a
+// crash/error event — a clean session has none of these BY DESIGN (sending them for every
+// session would multiply upload volume with nothing to diagnose), not missing data.
+// `timeline` is built from actually-stored events and exists for every session — it's the
+// real activity record, not a stand-in for breadcrumbs on clean sessions.
+export interface SessionTimelineEntry {
+  t: string
+  type: string
+  label: string
+  detail: string
+}
+
 export interface UserSession {
   session_id: string
   events: number
@@ -215,6 +227,9 @@ export interface UserSession {
   crashes: number
   errors: number
   network_failures: number
+  breadcrumbs: Breadcrumb[]
+  breadcrumbs_available: boolean
+  timeline: SessionTimelineEntry[]
 }
 
 // 01 §10 / BE-23. `user_ref` is the only identifier this app ever handles — the raw
@@ -236,9 +251,5 @@ export interface UserDetail {
     is_rooted: boolean
     is_dev_mode: boolean
   }
-  // No breadcrumbs here (readapi.py's user_detail() doesn't return them per session) —
-  // FE-21 asks for "outcome per session + breadcrumb" but only outcome is available from
-  // this endpoint today. Session breadcrumbs live only on a specific issue's sample event
-  // (GET /v1/issues/{id}), not per arbitrary session.
   sessions: UserSession[]
 }

@@ -358,11 +358,22 @@ Autentikasi **terpisah** dari ingestion — sesi user / SSO, bukan `X-APM-Key`.
 | `GET /v1/issues/{id}/breadcrumbs` | Timeline breadcrumb untuk sample event |
 | `GET /v1/apps/{id}/network` | Agregasi network per host & kategori. Dengan `&host=…&failure_category=…` mengembalikan blok `drilldown` — lihat catatan di bawah. |
 | `POST /v1/apps/{id}/users/resolve` | Menerima identifier mentah (mis. nomor telepon/email), meng-hash-nya dengan `server_key`, mengembalikan `user_ref`. **Input tidak disimpan.** Ini yang membuat "cari user via nomor HP" tetap bisa tanpa menyimpan nomornya. |
-| `GET /v1/apps/{id}/users/{user_ref}` | Ringkasan user + timeline sesi (layar User Lookup) |
+| `GET /v1/apps/{id}/users/{user_ref}` | Ringkasan user + timeline sesi (layar User Lookup). Tiap sesi membawa `timeline` (dari event tersimpan) dan `breadcrumbs` — lihat catatan di bawah. |
 | `PATCH /v1/issues/{id}` | Ubah status (triaged / resolved / ignored) |
 | `GET/POST /v1/apps/{id}/alerts` | Konfigurasi alert |
 
 > **Filter device-integrity berlaku lintas endpoint.** Endpoint `overview`, `issues`, dan `network` menerima parameter filter `is_emulator`, `is_rooted`, `is_dev_mode` — termasuk opsi "kecualikan sesi non-real (emulator/debug)" untuk metrik headline (FE-22).
+
+> **Breadcrumb pada timeline sesi — apa yang ada dan apa yang tidak.** Breadcrumb hidup di ring buffer memori perangkat dan **hanya ikut terkirim ketika ada `crash` atau `error`** (§4.5.1). Konsekuensinya:
+>
+> | Hasil sesi | `breadcrumbs` | `timeline` |
+> |---|---|---|
+> | `crashed` / `errors` | Terisi — jejak lengkap sebelum kejadian | Terisi |
+> | `clean` | **Kosong** — tidak pernah dikirim | Terisi |
+>
+> Sesi bersih tidak punya breadcrumb **secara desain**, bukan karena datanya hilang. Mengirimkannya untuk setiap sesi akan melipatgandakan volume unggahan tanpa manfaat diagnostik — tidak ada yang perlu didiagnosa pada sesi yang berjalan normal.
+>
+> Karena itu setiap sesi juga membawa `timeline`, disusun dari event yang benar-benar tersimpan (request network, crash, error, termination, lifecycle). Untuk sesi bersih, inilah satu-satunya rekaman aktivitas yang tersedia — dan ia data nyata, bukan pengganti. Frontend memakai `breadcrumbs_available` untuk memilih tampilan, dan **tidak menampilkan hitungan breadcrumb pada sesi bersih**.
 
 > **Blok `drilldown` pada endpoint network.** Diaktifkan dengan `&host=…` (opsional `&failure_category=…`) dan berisi, selain deret waktu per menit:
 >

@@ -234,6 +234,7 @@ disabled in the sidebar (2026-09-02 decision, see below), not built.
 | ✅ | Pasting a `user_ref` directly skips resolve entirely | Kevin Hardianto | Verified in-browser + network tab: `usr_deadbeef0000` fires only the `GET` (404), no `POST resolve` call |
 | ✅ | "no PII stored" badge, device-integrity chips, session timeline with outcome badges | Kevin Hardianto | Verified in-browser against real 8-session user: clean/errors/crashed badges all rendered correctly |
 | ✅ | Honest "not found" state, not a crash, for an unknown `user_ref` | Kevin Hardianto | Verified in-browser: `usr_deadbeef0000` → "No data for usr_deadbeef0000 in the last 30 days." |
+| ✅ | Session expands to breadcrumb trail where `breadcrumbs_available`, event timeline otherwise; no breadcrumb count shown on sessions without them | Kevin Hardianto | Verified in-browser against real data: 2 of 8 sessions (crash + error, both from the realistic-payload events) show "7 breadcrumbs" and expand to the black-box trail; the SIGSEGV-crash and network-failure-only sessions correctly show 0 and expand to their event timeline instead |
 
 **Decisions**
 - 2026-09-02 · **Raw identifier never touches this app's URL or persisted state.** Deliberate
@@ -248,6 +249,26 @@ disabled in the sidebar (2026-09-02 decision, see below), not built.
   to a specific issue's sample event (`GET /v1/issues/{id}`), not addressable per arbitrary
   session. Would need `user_detail()` extended to attach a breadcrumb snapshot per session
   (mirroring how `issue_detail()` already does it for one sample event) to close this.
+  **Superseded 2026-09-02 (same day, `user_detail()` extended, with a correction to the
+  mockup):** sessions now carry `breadcrumbs[]`, `breadcrumbs_available`, and `timeline[]`
+  (real stored events — network/crash/error/termination — for every session). Correction:
+  breadcrumbs only exist for sessions with a crash or error — they live in a device-side
+  ring buffer and only ride along on a failing event (01 §4.5.1); a clean session has none
+  **by design**, not missing data. The mockup's "14 breadcrumbs · order completed" on a
+  clean session isn't achievable without changing the SDK, so it was not built toward.
+  `SessionTimeline.tsx` gates on `breadcrumbs_available` (not `outcome` — an "errors" session
+  from a `network_failure` alone has no breadcrumb snapshot either, only crash/error events
+  carry one): expands to the breadcrumb trail (reusing Issue Detail's `BreadcrumbTimeline`
+  component) where available, the real event timeline otherwise, and shows no breadcrumb
+  count on sessions without them. Verified against real data: the realistic crash/error
+  sessions return 7 breadcrumbs each; the synthetic SIGSEGV crash and network-failure-only
+  sessions return 0 and fall back to their event timeline correctly.
+  One approximation, noted for accuracy: `BreadcrumbTimeline`'s relative-offset reference
+  uses the session's `last_seen` (server clock, `ts_server`) rather than the crash/error
+  event's own `ts_client` (device clock) — `user_detail()` doesn't expose a per-session
+  `ts_client`, only `first_seen`/`last_seen` in server time. Issue Detail's version of this
+  component has the exact device-clock reference available and uses it; this one doesn't,
+  so there's a theoretical server-latency skew here that Issue Detail's doesn't have.
 - 2026-09-02 · `user_ref` detection uses the exact format the server generates
   (`^usr_[0-9a-f]{12}$`, checked `user_ref_from()` in `ingest.py`) to decide resolve-or-not,
   rather than guessing a looser pattern.
