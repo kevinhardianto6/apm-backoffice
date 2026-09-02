@@ -5,6 +5,7 @@ import { Network } from './routes/Network'
 import { Overview } from './routes/Overview'
 import { RootRedirect } from './routes/RootRedirect'
 import { Shell } from './routes/Shell'
+import { UserLookup } from './routes/UserLookup'
 
 export function App() {
   return (
@@ -16,6 +17,7 @@ export function App() {
           <Route path="issues" element={<IssuesList />} />
           <Route path="issues/:issueId" element={<IssueDetail />} />
           <Route path="network" element={<Network />} />
+          <Route path="users" element={<UserLookup />} />
         </Route>
       </Routes>
     </BrowserRouter>

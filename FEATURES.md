@@ -8,7 +8,7 @@
 
 | Epic | Progress | Active / open |
 |------|:--------:|---------------|
-| APM Kit Backoffice v1 | 4/6 | feat-005 |
+| APM Kit Backoffice v1 | 5/6 | feat-006 |
 
 ---
 
@@ -29,7 +29,7 @@ disabled in the sidebar (2026-09-02 decision, see below), not built.
 | feat-002 | Overview (FE-01/02) | ✅ | Kevin Hardianto | feat-001 | See below |
 | feat-003 | Issues list + Issue Detail (FE-03/04/05/06/06b/06c/07/08/09/23) | ✅ | Kevin Hardianto | feat-002 | See below |
 | feat-004 | Network Explorer (FE-10/11) | ✅ | Kevin Hardianto | feat-001 | See below |
-| feat-005 | User Lookup (FE-21/23) | 🟡 | — | feat-001 | — |
+| feat-005 | User Lookup (FE-21/23) | ✅ | Kevin Hardianto | feat-001 | See below |
 | feat-006 | Polish — empty states, integration warnings, filters, shareable URLs (FE-19, §3.8, rest of FE-22) | 🟡 | — | feat-002, feat-003, feat-004, feat-005 | — |
 
 ### feat-001 · Shell + data layer
@@ -185,7 +185,7 @@ disabled in the sidebar (2026-09-02 decision, see below), not built.
 | ✅ | `./verify.sh build` / `lint` pass | Kevin Hardianto | `HARNESS_VERIFY: PASS (build)` / `(lint)` |
 | ✅ | Host table shows real p50/p95/p99/failure_rate, sorted by failure rate | Kevin Hardianto | Verified in-browser against 3 real seeded hosts |
 | ✅ | Drill-down by host → category → real time-series chart | Kevin Hardianto | Verified in-browser: `api.merchant.com` → `ssl_pinning_rejected` renders the real 1-point series from `drilldown.series` |
-| ✅ | Dedicated SSL/pinning guidance shown for `ssl_certificate`/`ssl_pinning_rejected` | Kevin Hardianto | `SslGuidanceCallout.tsx`, verified in-browser |
+| ✅ | Dedicated SSL/pinning guidance shown for `ssl_certificate`/`ssl_pinning_rejected`, evidenced (not asserted) via `all_active_versions_affected` | Kevin Hardianto | Verified in-browser against real data: 1 of 1 active version, `true` branch rendered with real users_affected/started/platforms |
 
 **Decisions**
 - 2026-09-02 · **No per-host 24h-trend sparkline.** Same root cause as Overview's missing
@@ -200,6 +200,18 @@ disabled in the sidebar (2026-09-02 decision, see below), not built.
   peak-failures/when stat from the chart, and says outright what's missing instead of
   inventing a user count or version spread. Would need `network()` extended with a per-user /
   per-version breakdown (mirroring `issues()`'s `breakdowns`) to close this properly.
+  **Superseded 2026-09-02 (same day, `network()` extended):** `drilldown` now returns
+  `users_affected`, `started`, `last_seen`, `peak`, `app_versions`/`platforms`/`os_versions`
+  breakdowns, `affected_version_count`/`active_version_count`, and
+  `all_active_versions_affected`. `SslGuidanceCallout.tsx` rewritten to show the Key Facts row
+  (users affected, started, version/platform spread — all real) and branch on
+  `all_active_versions_affected`: `true` shows the server-side-certificate explanation with
+  "N of N active versions affected" as the stated evidence; `false` states plainly that
+  failures are concentrated in specific versions (named) and does NOT show the cert-rotation
+  claim, since the evidence wouldn't support it. Verified live against real seeded data (1 of
+  1 active version, `true` branch); the `false` branch was verified by code review only — the
+  seed script produces just one app version, so there was no real payload to exercise it live.
+  `FailureTimeSeries.tsx` also switched to the server's `peak` instead of computing its own.
 - 2026-09-02 · Mockup's "1 active alert" badge and "Open incident" action omitted entirely —
   alerts (`GET/POST /v1/apps/{id}/alerts`) are out of scope for this epic (§00 Fase 3 backlog
   item, not in the BO-1..6 build order), and there's no data or feature to back either one.
@@ -210,10 +222,35 @@ disabled in the sidebar (2026-09-02 decision, see below), not built.
 
 ### feat-005 · User Lookup (FE-21/23)
 
-- **Status:** 🟡 not started · **Depends on:** feat-001
+- **Status:** ✅ done · **Depends on:** feat-001
 - **Done when:** Search accepts a raw identifier (resolved via `POST .../users/resolve`) or a
   `user_ref` directly; "no PII stored" badge; device-integrity chips; session timeline with
-  outcome badges and per-session breadcrumbs.
+  outcome badges.
+
+| ✓ | Check | By | Proof |
+|:-:|-------|----|-------|
+| ✅ | `./verify.sh build` / `lint` pass | Kevin Hardianto | `HARNESS_VERIFY: PASS (build)` / `(lint)` |
+| ✅ | Raw identifier search resolves via `POST .../users/resolve`, never stores/URLs the raw value | Kevin Hardianto | Verified in-browser + network tab: searching `0812345678` fires `POST resolve` then `GET .../usr_515736ec05fa`; URL after search is `?ref=usr_515736ec05fa` only |
+| ✅ | Pasting a `user_ref` directly skips resolve entirely | Kevin Hardianto | Verified in-browser + network tab: `usr_deadbeef0000` fires only the `GET` (404), no `POST resolve` call |
+| ✅ | "no PII stored" badge, device-integrity chips, session timeline with outcome badges | Kevin Hardianto | Verified in-browser against real 8-session user: clean/errors/crashed badges all rendered correctly |
+| ✅ | Honest "not found" state, not a crash, for an unknown `user_ref` | Kevin Hardianto | Verified in-browser: `usr_deadbeef0000` → "No data for usr_deadbeef0000 in the last 30 days." |
+
+**Decisions**
+- 2026-09-02 · **Raw identifier never touches this app's URL or persisted state.** Deliberate
+  and stricter than strictly required: `UserSearchBox` keeps the typed value in transient
+  component state only; the URL (and thus browser history, and anything that reads
+  `window.location`) only ever carries the resolved, opaque `user_ref` via `?ref=`. A raw
+  phone/email in the address bar would quietly undermine the "no PII stored" claim even
+  though the server itself never stores it.
+- 2026-09-02 · **Per-session breadcrumbs (FE-21) NOT built — flagging, not fabricating.**
+  `user_detail()` (checked `readapi.py`) returns only `outcome`/`crashes`/`errors`/
+  `network_failures` per session — no breadcrumb data. Breadcrumbs only exist today attached
+  to a specific issue's sample event (`GET /v1/issues/{id}`), not addressable per arbitrary
+  session. Would need `user_detail()` extended to attach a breadcrumb snapshot per session
+  (mirroring how `issue_detail()` already does it for one sample event) to close this.
+- 2026-09-02 · `user_ref` detection uses the exact format the server generates
+  (`^usr_[0-9a-f]{12}$`, checked `user_ref_from()` in `ingest.py`) to decide resolve-or-not,
+  rather than guessing a looser pattern.
 
 **Blockers** — none.
 
