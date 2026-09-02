@@ -356,13 +356,25 @@ Autentikasi **terpisah** dari ingestion — sesi user / SSO, bukan `X-APM-Key`.
 | `GET /v1/apps/{id}/issues` | Daftar issue (filter, sort, paginasi) |
 | `GET /v1/issues/{id}` | Detail issue + stack tersimbolikasi + sample event |
 | `GET /v1/issues/{id}/breadcrumbs` | Timeline breadcrumb untuk sample event |
-| `GET /v1/apps/{id}/network` | Agregasi network per host & kategori |
+| `GET /v1/apps/{id}/network` | Agregasi network per host & kategori. Dengan `&host=…&failure_category=…` mengembalikan blok `drilldown` — lihat catatan di bawah. |
 | `POST /v1/apps/{id}/users/resolve` | Menerima identifier mentah (mis. nomor telepon/email), meng-hash-nya dengan `server_key`, mengembalikan `user_ref`. **Input tidak disimpan.** Ini yang membuat "cari user via nomor HP" tetap bisa tanpa menyimpan nomornya. |
 | `GET /v1/apps/{id}/users/{user_ref}` | Ringkasan user + timeline sesi (layar User Lookup) |
 | `PATCH /v1/issues/{id}` | Ubah status (triaged / resolved / ignored) |
 | `GET/POST /v1/apps/{id}/alerts` | Konfigurasi alert |
 
 > **Filter device-integrity berlaku lintas endpoint.** Endpoint `overview`, `issues`, dan `network` menerima parameter filter `is_emulator`, `is_rooted`, `is_dev_mode` — termasuk opsi "kecualikan sesi non-real (emulator/debug)" untuk metrik headline (FE-22).
+
+> **Blok `drilldown` pada endpoint network.** Diaktifkan dengan `&host=…` (opsional `&failure_category=…`) dan berisi, selain deret waktu per menit:
+>
+> | Field | Kegunaan |
+> |---|---|
+> | `failures`, `users_affected` | Skala dampak |
+> | `started`, `last_seen`, `peak` | Kapan mulai dan puncaknya — untuk anotasi pada grafik |
+> | `app_versions`, `platforms`, `os_versions` | Sebaran; masing-masing dengan `count` dan `pct` |
+> | `affected_version_count` / `active_version_count` | Berapa versi terdampak dari berapa versi yang aktif mengirim ke host itu |
+> | `all_active_versions_affected` | `true` bila **seluruh** versi aktif terdampak |
+>
+> Field terakhir itu yang mengubah callout "likely cause" (FE-11) dari dugaan menjadi kesimpulan berbukti: kegagalan yang melonjak di **semua versi aplikasi sekaligus** tidak mungkin berasal dari rilis baru — polanya menunjuk ke perubahan di sisi server (rotasi sertifikat terhadap klien yang mem-pin). Sebaliknya, kegagalan yang hanya muncul di satu versi menunjuk ke regresi di versi itu. Tanpa pembanding ini, Frontend hanya bisa menyatakan dugaan.
 
 ---
 

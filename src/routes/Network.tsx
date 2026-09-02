@@ -111,9 +111,15 @@ export function Network() {
 
               {selectedCategory && (
                 <div className="mt-4 flex flex-col gap-4">
-                  <FailureTimeSeries series={drilldownData?.drilldown?.series ?? []} />
-                  {SSL_CATEGORIES.has(selectedCategory) && (
-                    <SslGuidanceCallout category={selectedCategory} />
+                  <FailureTimeSeries
+                    series={drilldownData?.drilldown?.series ?? []}
+                    peak={drilldownData?.drilldown?.peak ?? null}
+                  />
+                  {SSL_CATEGORIES.has(selectedCategory) && drilldownData?.drilldown && (
+                    <SslGuidanceCallout
+                      category={selectedCategory}
+                      drilldown={drilldownData.drilldown}
+                    />
                   )}
                 </div>
               )}

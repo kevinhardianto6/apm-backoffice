@@ -174,14 +174,71 @@ export interface NetworkDrilldownPoint {
   failures: number
 }
 
+// 01 §10 "Blok drilldown pada endpoint network". `all_active_versions_affected` is what
+// turns FE-11's "likely cause" callout from a claim into an evidenced conclusion: a spike
+// across every active version at once can't come from a new release, so it points at a
+// server-side change (cert rotation against a pinning client); confined to specific
+// versions instead points at a regression in those versions.
+export interface NetworkDrilldown {
+  host: string
+  failure_category: string | null
+  failures: number
+  users_affected: number
+  started: string | null
+  last_seen: string | null
+  peak: NetworkDrilldownPoint | null
+  app_versions: BreakdownItem[]
+  platforms: BreakdownItem[]
+  os_versions: BreakdownItem[]
+  affected_version_count: number
+  active_version_count: number
+  all_active_versions_affected: boolean
+  series: NetworkDrilldownPoint[]
+}
+
 export interface NetworkResponse {
   app_id: string
   window_days: number
   hosts: NetworkHost[]
   // Only present when the request includes `host` (readapi.py's network()).
-  drilldown?: {
-    host: string
-    failure_category: string | null
-    series: NetworkDrilldownPoint[]
+  drilldown?: NetworkDrilldown
+}
+
+export type SessionOutcome = 'crashed' | 'errors' | 'clean'
+
+export interface UserSession {
+  session_id: string
+  events: number
+  first_seen: string
+  last_seen: string
+  outcome: SessionOutcome
+  crashes: number
+  errors: number
+  network_failures: number
+}
+
+// 01 §10 / BE-23. `user_ref` is the only identifier this app ever handles — the raw
+// phone/email typed into search is resolved server-side and never stored, never put in
+// this app's URLs (that would defeat the point via browser history), never logged.
+export interface UserDetail {
+  user_ref: string
+  pseudonymous: true
+  sessions_count: number
+  device: {
+    model: string | null
+    os: string | null
+    os_version: string | null
+    app_version: string | null
+    app_build: string | null
   }
+  integrity: {
+    is_emulator: boolean
+    is_rooted: boolean
+    is_dev_mode: boolean
+  }
+  // No breadcrumbs here (readapi.py's user_detail() doesn't return them per session) —
+  // FE-21 asks for "outcome per session + breadcrumb" but only outcome is available from
+  // this endpoint today. Session breadcrumbs live only on a specific issue's sample event
+  // (GET /v1/issues/{id}), not per arbitrary session.
+  sessions: UserSession[]
 }
