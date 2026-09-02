@@ -7,6 +7,7 @@ import { Loading } from '../components/common/Loading'
 import { RelativeTime } from '../components/common/RelativeTime'
 import { StatusBadge } from '../components/common/StatusBadge'
 import { IssuesFilterBar, type IssuesFilters } from '../components/issues/IssuesFilterBar'
+import { RealUsersToggle } from '../components/overview/RealUsersToggle'
 import { useIssues } from '../hooks/useIssues'
 import { formatNumber } from '../lib/format'
 
@@ -33,6 +34,11 @@ export function IssuesList() {
   const setDays = (d: number) => {
     const next = new URLSearchParams(params)
     next.set('days', String(d))
+    setParams(next, { replace: true })
+  }
+  const setRealUsersOnly = (v: boolean) => {
+    const next = new URLSearchParams(params)
+    next.set('real_users_only', String(v))
     setParams(next, { replace: true })
   }
 
@@ -91,18 +97,21 @@ export function IssuesList() {
           <h1 className="text-lg font-semibold">Issues</h1>
           <p className="text-sm text-slate-500">{app.name}</p>
         </div>
-        <div className="flex overflow-hidden rounded border border-slate-700 text-sm">
-          {DAY_OPTIONS.map((opt) => (
-            <button
-              key={opt.days}
-              onClick={() => setDays(opt.days)}
-              className={`px-3 py-1.5 ${
-                days === opt.days ? 'bg-indigo-900/60 text-white' : 'text-slate-400'
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
+        <div className="flex items-center gap-3">
+          <div className="flex overflow-hidden rounded border border-slate-700 text-sm">
+            {DAY_OPTIONS.map((opt) => (
+              <button
+                key={opt.days}
+                onClick={() => setDays(opt.days)}
+                className={`px-3 py-1.5 ${
+                  days === opt.days ? 'bg-indigo-900/60 text-white' : 'text-slate-400'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          <RealUsersToggle checked={realUsersOnly} onChange={setRealUsersOnly} />
         </div>
       </div>
 
@@ -118,9 +127,18 @@ export function IssuesList() {
       {isLoading && <Loading label="Loading issues…" />}
       {error && <ErrorState error={error} />}
 
-      {data && filtered.length === 0 && (
+      {data && filtered.length === 0 && data.count > 0 && (
         <div className="mt-6 rounded border border-slate-800 p-6 text-sm text-slate-500">
-          No issues match these filters in the last {days} days.
+          No issues match these filters — {formatNumber(data.count)} issue
+          {data.count === 1 ? '' : 's'} exist in the last {days} days outside them. Try
+          widening the filters above.
+        </div>
+      )}
+
+      {data && filtered.length === 0 && data.count === 0 && (
+        <div className="mt-6 rounded border border-slate-800 p-6 text-sm text-slate-500">
+          No issues in the last {days} days — this app is clean, not silent. Check the
+          sidebar footer's "last event" time to confirm data is still arriving.
         </div>
       )}
 

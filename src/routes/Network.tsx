@@ -6,6 +6,7 @@ import { CategoryChips } from '../components/network/CategoryChips'
 import { FailureTimeSeries } from '../components/network/FailureTimeSeries'
 import { HostTable } from '../components/network/HostTable'
 import { SslGuidanceCallout } from '../components/network/SslGuidanceCallout'
+import { RealUsersToggle } from '../components/overview/RealUsersToggle'
 import { useNetwork } from '../hooks/useNetwork'
 import { formatCompactNumber } from '../lib/format'
 
@@ -21,12 +22,18 @@ export function Network() {
   const [params, setParams] = useSearchParams()
 
   const days = Number(params.get('days') ?? 1)
+  const realUsersOnly = params.get('real_users_only') !== 'false'
   const selectedHost = params.get('host')
   const selectedCategory = params.get('failure_category')
 
   const setDays = (d: number) => {
     const next = new URLSearchParams(params)
     next.set('days', String(d))
+    setParams(next, { replace: true })
+  }
+  const setRealUsersOnly = (v: boolean) => {
+    const next = new URLSearchParams(params)
+    next.set('real_users_only', String(v))
     setParams(next, { replace: true })
   }
   const selectHost = (host: string) => {
@@ -48,10 +55,10 @@ export function Network() {
   }
 
   // Overview list is unfiltered by host/category — only the drilldown query needs those.
-  const { data: overview, isLoading, error } = useNetwork(app.id, { days, realUsersOnly: true })
+  const { data: overview, isLoading, error } = useNetwork(app.id, { days, realUsersOnly })
   const { data: drilldownData } = useNetwork(app.id, {
     days,
-    realUsersOnly: true,
+    realUsersOnly,
     host: selectedHost ?? undefined,
     failureCategory: selectedCategory ?? undefined,
   })
@@ -68,18 +75,21 @@ export function Network() {
             {formatCompactNumber(totalRequests)} requests · {app.name}
           </p>
         </div>
-        <div className="flex overflow-hidden rounded border border-slate-700 text-sm">
-          {DAY_OPTIONS.map((opt) => (
-            <button
-              key={opt.days}
-              onClick={() => setDays(opt.days)}
-              className={`px-3 py-1.5 ${
-                days === opt.days ? 'bg-indigo-900/60 text-white' : 'text-slate-400'
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
+        <div className="flex items-center gap-3">
+          <div className="flex overflow-hidden rounded border border-slate-700 text-sm">
+            {DAY_OPTIONS.map((opt) => (
+              <button
+                key={opt.days}
+                onClick={() => setDays(opt.days)}
+                className={`px-3 py-1.5 ${
+                  days === opt.days ? 'bg-indigo-900/60 text-white' : 'text-slate-400'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          <RealUsersToggle checked={realUsersOnly} onChange={setRealUsersOnly} />
         </div>
       </div>
 
@@ -88,7 +98,9 @@ export function Network() {
 
       {overview && overview.hosts.length === 0 && (
         <div className="mt-6 rounded border border-slate-800 p-6 text-sm text-slate-500">
-          No network activity in the last {days === 1 ? '24h' : `${days}d`}.
+          No network activity in the last {days === 1 ? '24h' : `${days}d`}. If traffic is
+          expected, check the sidebar footer's "last event" time — a stale or missing value
+          means data isn't arriving, not that the network is quiet.
         </div>
       )}
 

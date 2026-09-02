@@ -8,7 +8,7 @@
 
 | Epic | Progress | Active / open |
 |------|:--------:|---------------|
-| APM Kit Backoffice v1 | 5/6 | feat-006 |
+| APM Kit Backoffice v1 | 6/6 | — |
 
 ---
 
@@ -30,7 +30,7 @@ disabled in the sidebar (2026-09-02 decision, see below), not built.
 | feat-003 | Issues list + Issue Detail (FE-03/04/05/06/06b/06c/07/08/09/23) | ✅ | Kevin Hardianto | feat-002 | See below |
 | feat-004 | Network Explorer (FE-10/11) | ✅ | Kevin Hardianto | feat-001 | See below |
 | feat-005 | User Lookup (FE-21/23) | ✅ | Kevin Hardianto | feat-001 | See below |
-| feat-006 | Polish — empty states, integration warnings, filters, shareable URLs (FE-19, §3.8, rest of FE-22) | 🟡 | — | feat-002, feat-003, feat-004, feat-005 | — |
+| feat-006 | Polish — empty states, integration warnings, filters, shareable URLs (FE-19, §3.8, rest of FE-22) | ✅ | Kevin Hardianto | feat-002, feat-003, feat-004, feat-005 | See below |
 
 ### feat-001 · Shell + data layer
 
@@ -277,10 +277,61 @@ disabled in the sidebar (2026-09-02 decision, see below), not built.
 
 ### feat-006 · Polish
 
-- **Status:** 🟡 not started · **Depends on:** feat-002, feat-003, feat-004, feat-005
+- **Status:** ✅ done · **Depends on:** feat-002, feat-003, feat-004, feat-005
 - **Done when:** Honest empty states everywhere (no problems vs no data arriving, clearly
   distinct); integration warnings from `docs/04` §3.8 (no `user_id`, symbols not uploaded, SDK
   event drops, stale SDK version); every issue view and filter combination has a shareable URL.
+
+| ✓ | Check | By | Proof |
+|:-:|-------|----|-------|
+| ✅ | `./verify.sh build` / `lint` pass | Kevin Hardianto | `HARNESS_VERIFY: PASS (build)` / `(lint)` |
+| ✅ | Overview never shows misleadingly-"healthy" 100%/0% cards for a zero-session window | Kevin Hardianto | Verified in-browser (fetch mocked to a real zero-session `overview()` response, both the plain-zero and filtered-to-zero cases) — metric cards replaced by an explicit amber notice in both cases |
+| ✅ | Sidebar footer's "last event" is a live staleness signal, not just a timestamp | Kevin Hardianto | `eventStaleness()` + color-coding in `StatusFooter.tsx`; verified in-browser (green when fresh) |
+| ✅ | "Real users only" toggle present everywhere FE-22 names (Overview, Issues, Network) | Kevin Hardianto | Added to Issues/Network (were URL-readable but had no UI control — a real gap); verified in-browser on both: toggling reveals/hides the emulator-only crash and events |
+| ✅ | Issues list distinguishes "filtered too narrow" from "clean/no data" (FE-19) | Kevin Hardianto | Code review — `data.count > 0` vs `=== 0` branch, mirroring the pattern already verified live in `TopIssuesPreview` |
+
+**Decisions**
+- 2026-09-02 · **The empty-state work centers on Overview, not just copy tweaks.**
+  `overview()` (readapi.py) defaults `crash_free_sessions`/`crash_free_users` to `100.0` and
+  every rate to `0.0` when `sessions === 0` — confirmed via a direct call against an app with
+  zero events: `{"crash_free_sessions": 100.0, "crash_free_users": 100.0, "error_rate": 0.0,
+  "network_failure_rate": 0.0, "sessions": 0}`. Left as-is, this is the single most dangerous
+  case docs/04 §4 warns about: it doesn't render as an empty screen, it renders as a
+  reassuring, fully-green dashboard. `Overview.tsx` now checks `sessions === 0` explicitly and
+  replaces the metric cards with an amber notice instead of letting the defaults imply health,
+  distinguishing "all sessions in this window were filtered out by Real users only" (data
+  exists) from "nothing arrived at all" (points at the footer's last-event signal).
+- 2026-09-02 · **The sidebar footer is the cross-screen mechanism, made active rather than
+  passive.** It already showed "last event" (built in feat-001), but as a neutral-colored
+  timestamp — reading it as a signal required the viewer to already know to distrust an old
+  value. `eventStaleness()` (`src/lib/time.ts`) now classifies it fresh (<1h, green) / stale
+  (<24h, amber) / very-stale or never (red), so a suspicious value is visually flagged without
+  requiring interpretation. Thresholds are a judgment call — no event-delivery SLA is
+  documented; pilot apps upload every `upload_interval_s` (30s default, `01` §9) plus normal
+  network delay, so 1h gives generous headroom before treating a gap as suspicious.
+- 2026-09-02 · **§3.8 integration warnings NOT built — all four conditions checked against
+  the Read API and none are answerable with current data, not a scope cut:**
+  - *Sessions without `setUser`* — `user_id` is never actually absent (the SDK generates a
+    stable per-install ID when the host app doesn't call `setUser`, `01` §2), so there is no
+    stored signal distinguishing "developer-supplied" from "SDK-generated" identifiers at all.
+    Nothing to query.
+  - *Symbols not uploaded* — same gap flagged since feat-003: no symbolication service, no
+    symbol-upload table, exists anywhere yet.
+  - *SDK-reported dropped events* — would require a client-reported metric that isn't part of
+    the event schema (`01` §4) at all; nothing to receive or query.
+  - *Stale SDK version* — closest to buildable: `sdk_version` **is** stored per event
+    (checked `ingest.py`'s schema), but no Read API endpoint returns it, and there's no
+    "latest published SDK version" authority anywhere to compare against even if it were
+    exposed. Would need both a `network`/`overview`-style aggregation added to the Read API
+    and a place to configure "current" version.
+  All four would need real, named server/schema work, not frontend guesswork — flagging
+  precisely rather than shipping fabricated warning banners that always say "all clear."
+- 2026-09-02 · **Shareable-URL audit** (docs/04 §4): Overview (`days`, `real_users_only`),
+  Issues (`days`, `real_users_only`, `type`, `status`, `platform`, `app_version`, `sort`),
+  Network (`days`, `real_users_only`, `host`, `failure_category`), Issue Detail (the path
+  itself), User Lookup (`ref` — deliberately excludes the raw searched identifier, see
+  feat-005) all reflect their full filter state in the URL. No gaps found beyond the two
+  toggles added above.
 
 **Blockers** — none.
 

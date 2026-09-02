@@ -7,7 +7,7 @@ import { MetricCard } from '../components/overview/MetricCard'
 import { RealUsersToggle } from '../components/overview/RealUsersToggle'
 import { TopIssuesPreview } from '../components/overview/TopIssuesPreview'
 import { useOverview } from '../hooks/useOverview'
-import { formatCompactNumber, formatPercent } from '../lib/format'
+import { formatCompactNumber, formatNumber, formatPercent } from '../lib/format'
 
 const DAY_OPTIONS = [
   { label: '24h', days: 1 },
@@ -70,7 +70,41 @@ export function Overview() {
       {isLoading && <Loading label="Loading overview…" />}
       {error && <ErrorState error={error} />}
 
-      {data && (
+      {/* A session-less window would otherwise show crash-free defaulting to 100% and
+          every rate to 0% — reassuringly "healthy" looking metrics that actually mean
+          nothing happened, not that nothing went wrong. Showing those cards here would
+          be exactly the "no problems" vs "no data arriving" conflation docs/04 §4 warns
+          against, so this case is called out explicitly instead. */}
+      {data && data.current.sessions === 0 && (
+        <div className="mt-6 rounded border border-amber-800 bg-amber-950/10 p-4 text-sm">
+          {realUsersOnly && data.excluded_non_real_events > 0 ? (
+            <>
+              <div className="font-medium text-amber-300">
+                No real-user sessions in the last {days === 1 ? '24h' : `${days}d`}
+              </div>
+              <p className="mt-1 text-amber-200/70">
+                {formatNumber(data.excluded_non_real_events)} emulator/dev-mode events came in
+                during this window, but "Real users only" is filtering all of them out. Turn
+                the toggle off to see them.
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="font-medium text-amber-300">
+                No sessions in the last {days === 1 ? '24h' : `${days}d`}
+              </div>
+              <p className="mt-1 text-amber-200/70">
+                This is not the same as "no problems" — check the <strong>last event</strong>{' '}
+                time in the sidebar footer. Recent and green means the app has simply been
+                quiet; old, red, or "—" means data isn't arriving and this dashboard can't see
+                what's actually happening right now.
+              </p>
+            </>
+          )}
+        </div>
+      )}
+
+      {data && data.current.sessions > 0 && (
         <>
           <div className="mt-6 grid grid-cols-5 gap-4">
             <MetricCard
@@ -115,11 +149,13 @@ export function Overview() {
               emulator/debug events
             </p>
           )}
-
-          <div className="mt-6">
-            <TopIssuesPreview appId={app.id} days={days} realUsersOnly={realUsersOnly} />
-          </div>
         </>
+      )}
+
+      {data && (
+        <div className="mt-6">
+          <TopIssuesPreview appId={app.id} days={days} realUsersOnly={realUsersOnly} />
+        </div>
       )}
     </div>
   )
