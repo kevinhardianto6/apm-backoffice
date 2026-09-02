@@ -9,8 +9,7 @@ MODE="${1:-build}"
 fail() { echo "HARNESS_VERIFY: FAIL ($1)"; exit 1; }
 
 run_build() {
-  echo "TODO: replace with this project's real build command." >&2
-  fail "build not configured"
+  npm run build || fail "build"
 }
 
 run_test() {
@@ -18,7 +17,7 @@ run_test() {
 }
 
 run_lint() {
-  echo "No lint check configured for this project."
+  npm run lint || fail "lint"
 }
 
 case "$MODE" in

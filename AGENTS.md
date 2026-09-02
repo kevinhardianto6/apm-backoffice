@@ -1,6 +1,7 @@
 # AGENTS.md
 
-apm-backoffice — TODO: one line describing what this project is.
+apm-backoffice — the backoffice web dashboard for APM Kit, an in-house mobile APM system.
+Client-only SPA reading a Read API served by the pilot ingestion server.
 Router for agent work. Facts live in the linked docs; this file is the map, not the manual.
 
 ## Session startup
@@ -17,9 +18,19 @@ Router for agent work. Facts live in the linked docs; this file is the map, not 
 
 ## Project overview
 
-- **Stack:** Not detected — fill this in.
-- **Structure:** Not detected — fill this in.
-- **Docs:** `CONSTITUTION.md` (rules), `FEATURES.md` (scope), `JOURNAL.md` (lessons).
+- **Stack:** React + Vite + TypeScript, client-only SPA (no server of its own). Tailwind for
+  styling, TanStack Query for data fetching/caching, react-router-dom for routing (URL holds
+  filter state), recharts for sparklines and the network time series.
+- **Structure:** `src/api/` (typed Read API client), `src/hooks/` (query hooks per resource),
+  `src/routes/` (one file per screen), `src/components/<domain>/`, `src/lib/` (time/number
+  formatting), `src/config/env.ts` (base URL + read token from `.env.local`, never hardcoded).
+- **Data source:** pilot ingestion server (`README-pilot-api.md`), Read API per
+  `docs/01-Kontrak-Data-API.md` §10, auth via `X-APM-Read-Token` header (SEC-16: separate from
+  the SDK's write-only app key).
+- **Docs:** `docs/00-Overview.md` (product context), `docs/01-Kontrak-Data-API.md` §10
+  (authoritative API contract), `docs/04-Frontend-Website.md` (FE-xx requirements + design
+  principles), `docs/mockups/*.png` (approved visual design), `CONSTITUTION.md` (rules),
+  `FEATURES.md` (scope), `JOURNAL.md` (lessons).
 
 ## Verification
 
