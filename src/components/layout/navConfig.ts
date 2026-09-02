@@ -18,7 +18,7 @@ export const navGroups: NavGroup[] = [
     heading: 'MONITOR',
     items: [
       { label: 'Overview', path: (appId) => `/apps/${appId}` },
-      { label: 'Issues' }, // feat-003
+      { label: 'Issues', path: (appId) => `/apps/${appId}/issues` },
       { label: 'Network' }, // feat-004
       { label: 'User Lookup' }, // feat-005
     ],

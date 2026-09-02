@@ -8,7 +8,7 @@
 
 | Epic | Progress | Active / open |
 |------|:--------:|---------------|
-| APM Kit Backoffice v1 | 2/6 | feat-003 |
+| APM Kit Backoffice v1 | 3/6 | feat-004 |
 
 ---
 
@@ -27,7 +27,7 @@ disabled in the sidebar (2026-09-02 decision, see below), not built.
 |----|---------|:------:|----|------------|----------|
 | feat-001 | Shell + data layer | ✅ | Kevin Hardianto | — | See below |
 | feat-002 | Overview (FE-01/02) | ✅ | Kevin Hardianto | feat-001 | See below |
-| feat-003 | Issues list + Issue Detail (FE-03/04/05/06/06b/06c/07/08/09/23) | 🟡 | — | feat-002 | — |
+| feat-003 | Issues list + Issue Detail (FE-03/04/05/06/06b/06c/07/08/09/23) | ✅ | Kevin Hardianto | feat-002 | See below |
 | feat-004 | Network Explorer (FE-10/11) | 🟡 | — | feat-001 | — |
 | feat-005 | User Lookup (FE-21/23) | 🟡 | — | feat-001 | — |
 | feat-006 | Polish — empty states, integration warnings, filters, shareable URLs (FE-19, §3.8, rest of FE-22) | 🟡 | — | feat-002, feat-003, feat-004, feat-005 | — |
@@ -116,16 +116,40 @@ disabled in the sidebar (2026-09-02 decision, see below), not built.
 
 ### feat-003 · Issues list + Issue Detail
 
-- **Status:** 🟡 not started · **Depends on:** feat-002
-- **Done when:** `/issues` list — filterable (app version, OS, platform, type, status, time
-  range), sortable (impact/events/users/recent), URL-reflected filter state, built on the
-  Overview's Top Issues table styling since no dedicated mockup exists — plus Issue Detail:
-  stack trace with app-owned frames highlighted / system frames dimmed and a visible
-  symbolication-pending note (FE-17 dependency, pre-symbolication per `docs/04` §3.6);
-  breadcrumb timeline relative to crash time; device/OS/app-version breakdowns; Environment
-  card (FE-23); status dropdown wired to `PATCH /v1/issues/{id}`; `error`-type issues show
-  source_file/function/line (FE-06b) instead of a stack trace; `termination`-type issues shown
-  with a distinct badge, never folded into crash metrics (FE-06c).
+- **Status:** ✅ done · **Depends on:** feat-002
+- **Done when:** `/issues` list — filterable, sortable, URL-reflected filter state — plus Issue
+  Detail with breakdowns, environment card, status dropdown, and type-specific display.
+
+| ✓ | Check | By | Proof |
+|:-:|-------|----|-------|
+| ✅ | `./verify.sh build` / `lint` pass | Kevin Hardianto | `HARNESS_VERIFY: PASS (build)` / `(lint)` |
+| ✅ | Issues list filters (type/status/platform/app version) and sorts (impact/events/recent), URL reflects state | Kevin Hardianto | Verified in-browser: `/apps/:id/issues?...` params all round-trip |
+| ✅ | Issue Detail renders real breakdowns/environment for crash, network_failure, error issue types | Kevin Hardianto | Verified in-browser against 3 real seeded issues (one each of crash/network/http_error) |
+| ✅ | Status dropdown PATCHes and persists | Kevin Hardianto | Verified in-browser: New→Triaged round-tripped through `PATCH /v1/issues/{id}`, confirmed on refetch |
+| ✅ | `error`/`termination` types get FE-06b/FE-06c-specific display, never a crash stack trace | Kevin Hardianto | `IssueDetail.tsx` branches by `issue.type`; no seeded `termination` issue existed to test live — logic reviewed, not exercised against real data |
+
+**Decisions**
+- 2026-09-02 · **Crash frame schema unconfirmed — flagging, not guessing.** `01 §4.3` says
+  `threads` holds "stack frame (address + offset)" but doesn't pin down per-frame field names,
+  and no real payload seen yet populates `threads`/`binary_images` at all (the pilot's own
+  `send-test-data.py` omits them from its crash events). `StackTrace.tsx` therefore renders
+  frames generically (whatever keys exist, as `key=value`) instead of assuming a schema, shows
+  a clear "not symbolicated" banner, and degrades to name/reason/crash_type when no frames
+  exist at all (today's actual pilot state). **FE-06's app-frame-highlighting is NOT
+  implemented** — that needs a documented way to link a frame to `binary_images` to tell app
+  code from system frameworks, which isn't specified or exhibited anywhere yet. Needs either a
+  real crash payload to design against, or a documented frame schema, before it can be built.
+- 2026-09-02 · **Breadcrumb entry schema unconfirmed**, same reason — embedded on the sample
+  event's attrs (not a separate event stream), no populated example seen. `BreadcrumbTimeline.tsx`
+  reads defensively (tries `category`/`message` plus a few plausible timestamp field names,
+  falls back to ordinal position) rather than hardcode field names that might not exist.
+- 2026-09-02 · `platform`/`app_version` filters run client-side against one `limit: 200` fetch
+  — `readapi.py`'s `issues()` doesn't accept those as query params (only `type`, `status`,
+  `sort`, `days`, `real_users_only`, `limit`). Fine at pilot scale; would need server-side
+  support to hold up at real volume.
+- 2026-09-02 · `/v1/issues/{id}` ignores `real_users_only` server-side (`readapi.py` hardcodes
+  `real_only=False` there) — only `days` (default 30) is actually honored. Not worked around
+  client-side; documented in `api/issueDetail.ts`.
 
 **Blockers** — none.
 

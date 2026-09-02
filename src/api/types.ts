@@ -74,3 +74,36 @@ export interface IssuesResponse {
   count: number
   issues: Issue[]
 }
+
+export interface BreakdownItem {
+  label: string
+  count: number
+  pct: number
+}
+
+export interface SampleEvent {
+  event_id: string
+  ts_server: string
+  ts_client: string
+  session_id: string
+  user_ref: string | null
+  // Shape varies by issue type (§4.3/4.4/4.7) and the crash frame/breadcrumb schema
+  // isn't nailed down in any real payload seen yet (test data omits threads/binary_images
+  // entirely) — kept as a bag of fields, read defensively at render time.
+  attrs: Record<string, unknown>
+  ctx: Record<string, unknown>
+}
+
+export interface IssueDetail extends Issue {
+  app_id: string
+  breakdowns: {
+    devices: BreakdownItem[]
+    os_versions: BreakdownItem[]
+    app_versions: BreakdownItem[]
+  }
+  sample_event: SampleEvent
+  // Embedded on the sample crash event's attrs server-side, not a separate breadcrumb
+  // event stream. Per-entry shape unconfirmed (no sample data has this populated yet) —
+  // treated as unknown[] and rendered defensively.
+  breadcrumbs: unknown[]
+}

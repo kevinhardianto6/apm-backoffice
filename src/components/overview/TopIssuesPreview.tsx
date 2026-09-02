@@ -51,6 +51,7 @@ export function TopIssuesPreview({
       )}
 
       {data && data.issues.length > 0 && (
+        <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="text-xs text-slate-500">
@@ -85,6 +86,7 @@ export function TopIssuesPreview({
             ))}
           </tbody>
         </table>
+        </div>
       )}
     </div>
   )

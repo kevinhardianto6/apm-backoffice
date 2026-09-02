@@ -13,7 +13,7 @@ export function Sidebar({ appId }: { appId: string }) {
                 <NavLink
                   key={item.label}
                   to={item.path(appId)}
-                  end
+                  end={item.label === 'Overview'}
                   className={({ isActive }) =>
                     `rounded px-2 py-1.5 ${
                       isActive
