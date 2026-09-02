@@ -19,7 +19,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { label: 'Overview', path: (appId) => `/apps/${appId}` },
       { label: 'Issues', path: (appId) => `/apps/${appId}/issues` },
-      { label: 'Network' }, // feat-004
+      { label: 'Network', path: (appId) => `/apps/${appId}/network` },
       { label: 'User Lookup' }, // feat-005
     ],
   },

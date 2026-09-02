@@ -8,7 +8,7 @@
 
 | Epic | Progress | Active / open |
 |------|:--------:|---------------|
-| APM Kit Backoffice v1 | 3/6 | feat-004 |
+| APM Kit Backoffice v1 | 4/6 | feat-005 |
 
 ---
 
@@ -28,7 +28,7 @@ disabled in the sidebar (2026-09-02 decision, see below), not built.
 | feat-001 | Shell + data layer | ✅ | Kevin Hardianto | — | See below |
 | feat-002 | Overview (FE-01/02) | ✅ | Kevin Hardianto | feat-001 | See below |
 | feat-003 | Issues list + Issue Detail (FE-03/04/05/06/06b/06c/07/08/09/23) | ✅ | Kevin Hardianto | feat-002 | See below |
-| feat-004 | Network Explorer (FE-10/11) | 🟡 | — | feat-001 | — |
+| feat-004 | Network Explorer (FE-10/11) | ✅ | Kevin Hardianto | feat-001 | See below |
 | feat-005 | User Lookup (FE-21/23) | 🟡 | — | feat-001 | — |
 | feat-006 | Polish — empty states, integration warnings, filters, shareable URLs (FE-19, §3.8, rest of FE-22) | 🟡 | — | feat-002, feat-003, feat-004, feat-005 | — |
 
@@ -176,10 +176,35 @@ disabled in the sidebar (2026-09-02 decision, see below), not built.
 
 ### feat-004 · Network Explorer (FE-10/11)
 
-- **Status:** 🟡 not started · **Depends on:** feat-001
+- **Status:** ✅ done · **Depends on:** feat-001
 - **Done when:** Host table with p50/p95/p99 and failure rate; drill-down by
-  `failure_category` with a dedicated SSL/pinning view (time series + "likely cause" callout,
-  matching the mockup's spike-as-diagnosis framing).
+  `failure_category` with a dedicated SSL/pinning view (time series + guidance callout).
+
+| ✓ | Check | By | Proof |
+|:-:|-------|----|-------|
+| ✅ | `./verify.sh build` / `lint` pass | Kevin Hardianto | `HARNESS_VERIFY: PASS (build)` / `(lint)` |
+| ✅ | Host table shows real p50/p95/p99/failure_rate, sorted by failure rate | Kevin Hardianto | Verified in-browser against 3 real seeded hosts |
+| ✅ | Drill-down by host → category → real time-series chart | Kevin Hardianto | Verified in-browser: `api.merchant.com` → `ssl_pinning_rejected` renders the real 1-point series from `drilldown.series` |
+| ✅ | Dedicated SSL/pinning guidance shown for `ssl_certificate`/`ssl_pinning_rejected` | Kevin Hardianto | `SslGuidanceCallout.tsx`, verified in-browser |
+
+**Decisions**
+- 2026-09-02 · **No per-host 24h-trend sparkline.** Same root cause as Overview's missing
+  sparklines — `network()` (checked `readapi.py`) returns only whole-window aggregates per
+  host, no bucketed history series outside a specific host+category drilldown.
+- 2026-09-02 · **FE-11's Key Facts panel (users affected, app-version/OS spread, first-seen)
+  is NOT built — flagging, not fabricating.** The mockup and FE-11's own text call for these
+  specifically for SSL/pinning drill-downs, but `network()` aggregates only
+  requests/latency/failure-category counts per host — nothing per-user or per-version, unlike
+  `issues()` which already returns exactly that shape for issues. `SslGuidanceCallout.tsx`
+  shows the general diagnostic heuristic (real, from FE-11's own text) plus the real
+  peak-failures/when stat from the chart, and says outright what's missing instead of
+  inventing a user count or version spread. Would need `network()` extended with a per-user /
+  per-version breakdown (mirroring `issues()`'s `breakdowns`) to close this properly.
+- 2026-09-02 · Mockup's "1 active alert" badge and "Open incident" action omitted entirely —
+  alerts (`GET/POST /v1/apps/{id}/alerts`) are out of scope for this epic (§00 Fase 3 backlog
+  item, not in the BO-1..6 build order), and there's no data or feature to back either one.
+- 2026-09-02 · Day range limited to 24h/7d (no 30d) to match the mockup's own toggle for this
+  screen specifically — Overview and Issues offer 30d, Network does not.
 
 **Blockers** — none.
 

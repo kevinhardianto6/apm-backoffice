@@ -145,3 +145,43 @@ export interface IssueDetail extends Issue {
   sample_event: SampleEvent
   breadcrumbs: Breadcrumb[]
 }
+
+// 01 §5.
+export type FailureCategory =
+  | 'ssl_certificate'
+  | 'ssl_pinning_rejected'
+  | 'tls_handshake'
+  | 'timeout'
+  | 'dns'
+  | 'connectivity'
+  | 'cancelled'
+  | 'http_error'
+  | 'unknown'
+
+export interface NetworkHost {
+  host: string
+  requests: number
+  p50: number | null
+  p95: number | null
+  p99: number | null
+  failure_rate: number
+  failures_by_category: Partial<Record<FailureCategory, number>>
+}
+
+export interface NetworkDrilldownPoint {
+  /** Minute bucket, `ts_server` truncated to 16 chars (YYYY-MM-DDTHH:MM). */
+  t: string
+  failures: number
+}
+
+export interface NetworkResponse {
+  app_id: string
+  window_days: number
+  hosts: NetworkHost[]
+  // Only present when the request includes `host` (readapi.py's network()).
+  drilldown?: {
+    host: string
+    failure_category: string | null
+    series: NetworkDrilldownPoint[]
+  }
+}
