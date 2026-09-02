@@ -81,15 +81,56 @@ export interface BreakdownItem {
   pct: number
 }
 
+// 01 §4.3.1. `is_app` is set by the SDK at capture time — it knows its own main binary;
+// deriving this in the frontend by name-matching would be fragile. `symbol_name`/`file`/
+// `line` are null until BE-11's symbolication runs; render whichever is present.
+export interface StackFrame {
+  index: number
+  object_name: string
+  object_addr: string
+  instruction_addr: string
+  is_app: boolean
+  symbol_name: string | null
+  file: string | null
+  line: number | null
+}
+
+export interface Thread {
+  index: number
+  crashed: boolean
+  name: string
+  frames: StackFrame[]
+}
+
+// 01 §4.3.2. `uuid` matches this binary to the correct symbol file (dSYM/mapping).
+export interface BinaryImage {
+  name: string
+  uuid: string
+  base_addr: string
+  size: number
+  arch: string
+  is_app: boolean
+}
+
+// 01 §4.5.1. Already decoded from its wire form (a JSON string, so it inherits the same
+// SEC-05 scrubbing pass as any other string attribute) by the server before it reaches
+// this response — readapi.py's issue_detail() does the json.loads.
+export interface Breadcrumb {
+  timestamp: string
+  category: 'navigation' | 'user_action' | 'network' | 'lifecycle' | 'state' | 'log'
+  level: 'debug' | 'info' | 'warning' | 'error'
+  message: string
+}
+
 export interface SampleEvent {
   event_id: string
   ts_server: string
   ts_client: string
   session_id: string
   user_ref: string | null
-  // Shape varies by issue type (§4.3/4.4/4.7) and the crash frame/breadcrumb schema
-  // isn't nailed down in any real payload seen yet (test data omits threads/binary_images
-  // entirely) — kept as a bag of fields, read defensively at render time.
+  // Shape varies by issue type (§4.3/4.4/4.7) — crash-specific fields (threads,
+  // binary_images) are typed above and read via `attrs.threads as Thread[] | undefined`
+  // at the call site, since attrs is a untyped bag shared across all issue types.
   attrs: Record<string, unknown>
   ctx: Record<string, unknown>
 }
@@ -102,8 +143,5 @@ export interface IssueDetail extends Issue {
     app_versions: BreakdownItem[]
   }
   sample_event: SampleEvent
-  // Embedded on the sample crash event's attrs server-side, not a separate breadcrumb
-  // event stream. Per-entry shape unconfirmed (no sample data has this populated yet) —
-  // treated as unknown[] and rendered defensively.
-  breadcrumbs: unknown[]
+  breadcrumbs: Breadcrumb[]
 }

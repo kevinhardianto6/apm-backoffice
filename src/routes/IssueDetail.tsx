@@ -69,7 +69,7 @@ export function IssueDetail() {
           {issue.type === 'crash' && <StackTrace attrs={issue.sample_event.attrs} />}
           <BreadcrumbTimeline
             breadcrumbs={issue.breadcrumbs}
-            crashTsServer={issue.sample_event.ts_server}
+            referenceTsClient={issue.sample_event.ts_client}
           />
         </div>
 

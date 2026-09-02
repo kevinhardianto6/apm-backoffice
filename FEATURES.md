@@ -126,7 +126,7 @@ disabled in the sidebar (2026-09-02 decision, see below), not built.
 | ✅ | Issues list filters (type/status/platform/app version) and sorts (impact/events/recent), URL reflects state | Kevin Hardianto | Verified in-browser: `/apps/:id/issues?...` params all round-trip |
 | ✅ | Issue Detail renders real breakdowns/environment for crash, network_failure, error issue types | Kevin Hardianto | Verified in-browser against 3 real seeded issues (one each of crash/network/http_error) |
 | ✅ | Status dropdown PATCHes and persists | Kevin Hardianto | Verified in-browser: New→Triaged round-tripped through `PATCH /v1/issues/{id}`, confirmed on refetch |
-| ✅ | `error`/`termination` types get FE-06b/FE-06c-specific display, never a crash stack trace | Kevin Hardianto | `IssueDetail.tsx` branches by `issue.type`; no seeded `termination` issue existed to test live — logic reviewed, not exercised against real data |
+| ✅ | `error`/`termination` types get FE-06b/FE-06c-specific display, never a crash stack trace | Kevin Hardianto | Verified in-browser 2026-09-02 against real seeded `error` (source_file/function/line) and `termination` (`memory_limit`) issues |
 
 **Decisions**
 - 2026-09-02 · **Crash frame schema unconfirmed — flagging, not guessing.** `01 §4.3` says
@@ -139,10 +139,31 @@ disabled in the sidebar (2026-09-02 decision, see below), not built.
   implemented** — that needs a documented way to link a frame to `binary_images` to tell app
   code from system frameworks, which isn't specified or exhibited anywhere yet. Needs either a
   real crash payload to design against, or a documented frame schema, before it can be built.
+  **Superseded 2026-09-02 (same day, contract updated to v1.4):** `01 §4.3.1/§4.3.2` now
+  specifies the frame schema exactly, and app-frame highlighting turns out NOT to need
+  symbolication at all — `is_app` is set by the SDK at capture time (it knows its own main
+  binary; the frontend deriving this by name-matching would have been fragile). `StackTrace.tsx`
+  rewritten: highlights frames where `is_app === true`, dims the rest, shows
+  `object_name` + `instruction_addr`, and will show `symbol_name`/`file`/`line` in place of the
+  raw address once BE-11 populates them — no redesign needed. Verified against a real 2-thread,
+  5-frame payload (mixed `is_app`) via `send-test-data.py`.
 - 2026-09-02 · **Breadcrumb entry schema unconfirmed**, same reason — embedded on the sample
   event's attrs (not a separate event stream), no populated example seen. `BreadcrumbTimeline.tsx`
   reads defensively (tries `category`/`message` plus a few plausible timestamp field names,
   falls back to ordinal position) rather than hardcode field names that might not exist.
+  **Superseded 2026-09-02 (same day, contract v1.4):** `01 §4.5.1` now documents the exact
+  shape — `timestamp`/`category`/`level`/`message`, delivered as a JSON *string* (not a nested
+  array) specifically so it inherits SEC-05 scrubbing like any other string attribute; the
+  server (`readapi.py`) already decodes it before this app ever sees it. Rewrote
+  `BreadcrumbTimeline.tsx` to read the documented fields directly, dropped the ordinal
+  fallback, and switched relative-time to use the crash's `sample_event.ts_client` (device
+  clock, same source as breadcrumb `timestamp`) rather than `ts_server`, avoiding
+  server-latency skew. Verified against a real 7-breadcrumb payload ending in the SSL failure
+  that preceded the crash. Observation for whoever next touches `send-test-data.py`: its
+  breadcrumb `timestamp`s are hardcoded to a fixed string while the crash event's `ts_client`
+  is generated at send-time, so the demo shows breadcrumbs ~52 minutes "before" the crash
+  instead of the intended few-seconds lead-in — not a frontend bug, the relative-time math is
+  correct against whatever timestamps it's given.
 - 2026-09-02 · `platform`/`app_version` filters run client-side against one `limit: 200` fetch
   — `readapi.py`'s `issues()` doesn't accept those as query params (only `type`, `status`,
   `sort`, `days`, `real_users_only`, `limit`). Fine at pilot scale; would need server-side
