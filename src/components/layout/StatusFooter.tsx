@@ -1,6 +1,7 @@
 import { useHealth } from '../../hooks/useHealth'
 import { eventStaleness } from '../../lib/time'
 import { RelativeTime } from '../common/RelativeTime'
+import { IntegrationStatusLines } from './IntegrationStatusLines'
 
 // "symbols N pending" from the mockup is intentionally omitted: no symbol-upload
 // data exists anywhere yet (symbolication service doesn't exist — docs/04 §3.6).
@@ -17,7 +18,7 @@ const staleColor: Record<ReturnType<typeof eventStaleness>, string> = {
   never: 'text-red-400',
 }
 
-export function StatusFooter({ lastEvent }: { lastEvent: string | null }) {
+export function StatusFooter({ appId, lastEvent }: { appId: string; lastEvent: string | null }) {
   const { isLoading, isError } = useHealth()
 
   const ingestLabel = isLoading ? 'checking…' : isError ? 'unreachable' : 'healthy'
@@ -37,6 +38,7 @@ export function StatusFooter({ lastEvent }: { lastEvent: string | null }) {
         <span className="shrink-0">last event</span>
         <RelativeTime iso={lastEvent} className={staleColor[eventStaleness(lastEvent)]} />
       </div>
+      <IntegrationStatusLines appId={appId} />
     </div>
   )
 }

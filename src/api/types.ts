@@ -253,3 +253,52 @@ export interface UserDetail {
   }
   sessions: UserSession[]
 }
+
+// 01 §2.2/§2.3, 04 §3.8. Every block carries `available` — the frontend must never show
+// an "all clear" for a condition it can't actually answer yet (an absent warning only
+// means something if its presence would have been possible). When `available` is false,
+// render nothing/muted for that condition instead of a fake healthy status; `reason`
+// explains why when present.
+export interface UserIdSourceInfo {
+  available: boolean
+  host_sessions: number
+  generated_sessions: number
+  unknown_sessions: number
+  generated_pct: number | null
+  reason?: string
+}
+
+export interface SdkHealthInfo {
+  available: boolean
+  installs_reporting: number
+  written: number
+  sent: number
+  dropped: number
+  dropped_pct: number | null
+  drop_reasons: Record<string, number>
+  reason?: string
+}
+
+export interface SdkVersionInfo {
+  sdk_name: string
+  version: string | null
+  sessions: number
+  /** `null` means the server has no registry entry for this SDK — not the same as "this is the latest". */
+  latest_known: string | null
+  /** `null` (not `false`) when `latest_known` is null — unknown, not up to date. */
+  is_outdated: boolean | null
+}
+
+export interface SymbolicationInfo {
+  available: boolean
+  reason?: string
+}
+
+export interface IntegrationResponse {
+  app_id: string
+  window_days: number
+  user_id_source: UserIdSourceInfo
+  sdk_health: SdkHealthInfo
+  sdk_versions: SdkVersionInfo[]
+  symbolication: SymbolicationInfo
+}

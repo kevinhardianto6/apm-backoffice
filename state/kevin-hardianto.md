@@ -7,37 +7,40 @@
 
 ## Now
 
-- **Objective:** Build the APM Kit backoffice SPA (React+Vite+TS) against the pilot Read API,
-  one BO feature at a time, stopping for review after each (see FEATURES.md epic).
-- **Active feature:** feat-006 · Polish — ✅ done. **This closes the 6-feature epic (6/6).**
-  Stopped for review per build order.
-- **Status:** 🟠 awaiting user review. Epic is functionally complete; not yet rotated to
-  `archive/epics/` — left for the user to decide after reviewing feat-006.
+- **Objective:** Was building the APM Kit backoffice SPA epic (feat-001..006). **That epic is
+  now closed and rotated** to `archive/epics/apm-kit-backoffice-v1.md` per the user's request.
+- **Active feature:** None. `FEATURES.md` currently has no open epic or feature.
+- **Status:** 🟡 idle — waiting on new scope from the user.
 - **Last verify:** `./verify.sh build` → `HARNESS_VERIFY: PASS (build)`;
-  `./verify.sh lint` → `HARNESS_VERIFY: PASS (lint)`. Verified live in-browser (including a
-  temporary fetch-mock to force the zero-session case, since no real narrow-window gap exists
-  in the seeded data) — see FEATURES.md feat-006 evidence table.
+  `./verify.sh lint` → `HARNESS_VERIFY: PASS (lint)`. Full app verified live in-browser across
+  all 4 MONITOR screens plus the new integration-warnings footer lines and FE-18 copy button.
 
 ## Next step
 
-Nothing queued — the epic's 6 features are all ✅. Waiting on user direction: review feat-006,
-then either (a) ask to rotate the completed epic to `archive/epics/` per
-`.claude/skills/edts-harness/references/rotation.md`, or (b) open new `FEATURES.md` rows for
-further work (P1/P2 items intentionally deferred: FE-12/13/14/16/18/20, alerts, admin, RBAC,
-SSO, and the several real server-side gaps below), or (c) something else entirely.
+Nothing queued. `FEATURES.md` is now just the header + an empty roll-up table + the Shipped
+entry. When new work comes in:
+- If it's more backoffice scope (the deferred P1/P2 items: FE-12/13/14/16/20, alerts, admin,
+  RBAC, SSO — see the archived epic's intro for why FE-12/13 specifically were declined, not
+  just deferred), start a new `## Epic ·` section in `FEATURES.md` rather than reopening the
+  archived one.
+- If it's something else entirely, same — new epic section, fresh `feat-` numbering continues
+  from where it left off (last used: feat-006) unless the user wants a new prefix.
 
-Real gaps still open, flagged in FEATURES.md, none blocking anything built so far:
-- No time-series/history endpoint → no sparklines (Overview cards, per-host Network trend).
-- No SLO config → no breach-styling on Overview cards.
-- §3.8 integration warnings (stale SDK version, dropped events, missing setUser, symbols) —
-  none of the four are answerable with current Read API / schema; would need real
-  server-side additions, detailed in FEATURES.md feat-006.
-- User Lookup's breadcrumb relative-time uses `last_seen` (server clock) not `ts_client`
+Real, still-open gaps from the closed epic worth knowing about before touching this codebase
+again (full detail in the archived epic file):
+- No time-series/history endpoint anywhere → no sparklines (Overview cards, per-host Network
+  trend).
+- No SLO config → no breach-styling on Overview cards (amber-border-on-bad-trend substitutes).
+- Stale-SDK-version warning UI reads `sdk_versions[].is_outdated` correctly already but has
+  never seen real `true`/named-outdated data — the user said they're adding the "latest
+  version" registry server-side; no frontend change needed once that lands, just re-verify.
+- User Lookup's breadcrumb relative-time uses `last_seen` (server clock), not `ts_client`
   (device clock) — `user_detail()` has no per-session device timestamp, unlike Issue Detail.
 
 Pilot server is running in the background (`ingest.py` in `/Users/kevinhardianto/APM/apm-ingest`,
-DB re-seeded 2026-09-02) — restart it (same dir, `APM_CORS_ORIGINS='http://localhost:5173'
-python3 ingest.py`, then `python3 send-test-data.py`) if the session's background process died.
+DB last re-seeded 2026-09-03 with `user_id_source`/`sdk_health` support) — restart it (same
+dir, `APM_CORS_ORIGINS='http://localhost:5173' python3 ingest.py`, then
+`python3 send-test-data.py`) if the session's background process died.
 
 ## Parked
 
@@ -55,12 +58,14 @@ python3 ingest.py`, then `python3 send-test-data.py`) if the session's backgroun
 
 | File | Change | Why |
 |------|--------|-----|
-| src/lib/time.ts | Added `eventStaleness()` | Turns "last event" into a fresh/stale/very-stale/never signal |
-| src/components/common/RelativeTime.tsx | Added optional `className` | Lets the footer color-code by staleness |
-| src/components/layout/StatusFooter.tsx | Wired staleness coloring | Makes the "no problems" vs "no data arriving" distinction visible app-wide (user's explicit priority) |
-| src/routes/Overview.tsx | Added explicit zero-session handling | Metric cards default to misleading 100%/0% at sessions=0 — replaced with an honest notice |
-| src/routes/IssuesList.tsx | Split empty state (filtered vs clean/no-data); added RealUsersToggle | FE-19 + FE-22 gaps |
-| src/routes/Network.tsx | Added RealUsersToggle, wired real_users_only through (was hardcoded true) | FE-22 gap |
-| FEATURES.md, this file | Updated | feat-006 evidence, §3.8 gap analysis, shareable-URL audit |
+| src/api/{integration,types}.ts | Added IntegrationResponse + related types, fetchIntegration | New `GET /v1/apps/:id/integration` endpoint |
+| src/hooks/useIntegration.ts | Added | Query hook, 60s refetch |
+| src/components/layout/IntegrationStatusLines.tsx | Added | 3-state (unavailable/healthy/warning) status rows |
+| src/components/layout/StatusFooter.tsx, routes/Shell.tsx | Updated | Wired new status lines in; StatusFooter now takes `appId` |
+| src/lib/issueMarkdown.ts, components/issues/CopyMarkdownButton.tsx | Added | FE-18 |
+| src/routes/IssueDetail.tsx | Updated | Added Copy as Markdown button next to status dropdown |
+| FEATURES.md | Epic rotated out | Closed epic moved to archive/epics/, roll-up table now empty, Shipped entry added |
+| archive/epics/apm-kit-backoffice-v1.md | Added | Full rotated epic detail (all 6 features, evidence, decisions) |
+| this file | Reset for idle state | Epic closed, no active feature |
 
 _Ground truth: run `git diff --stat` to confirm this table matches reality._

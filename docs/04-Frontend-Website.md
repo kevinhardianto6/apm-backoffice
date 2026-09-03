@@ -131,12 +131,14 @@ Backend sudah mengelompokkan event menjadi **Issue** lewat fingerprinting (`01` 
 
 Beberapa masalah hanya bisa dideteksi sistem, tapi hanya bisa diperbaiki developer aplikasi. Website adalah tempat pertemuan keduanya — tampilkan sebagai notifikasi persisten di level app, bukan toast sesaat:
 
-| Kondisi | Pesan yang perlu disampaikan |
-|---|---|
-| Sebagian besar sesi tanpa `user_id` (app host belum memanggil `setUser`, MOB-28) | App mana, % sesi terdampak, dan bahwa User Lookup jadi terbatas untuk app itu |
-| Symbol belum diupload untuk build tertentu (FE-17) | Build mana, berapa crash yang tertunda symbolication |
-| SDK melaporkan event terbuang (MOB-27) | Berapa banyak dan penyebabnya (antrean penuh / payload ditolak) |
-| Versi SDK sudah usang | Versi terpasang, versi terbaru, dan apa yang berubah |
+| Kondisi | Sumber data | Pesan yang perlu disampaikan |
+|---|---|---|
+| App host belum memanggil `setUser` — `user_id_source` = `generated` (`01` §2.2) | Envelope | App mana, % sesi terdampak, dan bahwa `user_ref` tidak bisa dicocokkan dengan sistem utama sehingga User Lookup terbatas |
+| SDK melaporkan event terbuang — `sdk.health.dropped` naik (`01` §2.3) | Envelope | Berapa banyak, rasio terhadap `written`, dan penyebabnya dari `drop_reasons` |
+| Versi SDK sudah usang | Registry versi di server | Versi terpasang, versi terbaru, dan apa yang berubah |
+| Symbol belum diupload untuk build tertentu (FE-17) | **Butuh symbolication service (BE-10, Fase 3)** | Build mana, berapa crash yang tertunda symbolication |
+
+> **Jangan tampilkan banner "semua aman" untuk kondisi yang belum bisa dijawab.** Peringatan integrasi hanya berarti bila ketiadaannya berarti sesuatu. Selama symbolication belum ada, ketiadaan peringatan symbol tidak menyatakan apa pun — dan menampilkannya sebagai "aman" justru menyesatkan, sama seperti dashboard hijau penuh untuk app yang tidak mengirim data sama sekali.
 
 ---
 

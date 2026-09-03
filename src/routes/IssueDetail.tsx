@@ -3,6 +3,7 @@ import { useOutletContext } from 'react-router-dom'
 import type { App } from '../api/types'
 import { BreakdownCard } from '../components/issues/BreakdownCard'
 import { BreadcrumbTimeline } from '../components/issues/BreadcrumbTimeline'
+import { CopyMarkdownButton } from '../components/issues/CopyMarkdownButton'
 import { EnvironmentCard } from '../components/issues/EnvironmentCard'
 import { ErrorLocation } from '../components/issues/ErrorLocation'
 import { StackTrace } from '../components/issues/StackTrace'
@@ -57,7 +58,10 @@ export function IssueDetail() {
             </span>
           </div>
         </div>
-        <StatusDropdown issueId={issue.id} status={issue.status} />
+        <div className="flex items-center gap-2">
+          <CopyMarkdownButton issue={issue} />
+          <StatusDropdown issueId={issue.id} status={issue.status} />
+        </div>
       </div>
 
       <div className="mt-6 grid grid-cols-2 gap-4">

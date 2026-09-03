@@ -35,7 +35,7 @@ export function Shell() {
           </div>
           <Sidebar appId={appId} />
         </div>
-        <StatusFooter lastEvent={selectedApp.last_seen} />
+        <StatusFooter appId={appId} lastEvent={selectedApp.last_seen} />
       </div>
       <div className="flex-1 overflow-auto">
         <Outlet context={{ app: selectedApp }} />
