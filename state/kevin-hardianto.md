@@ -13,7 +13,12 @@
 - **Status:** 🟡 idle — waiting on new scope from the user.
 - **Last verify:** `./verify.sh build` → `HARNESS_VERIFY: PASS (build)`;
   `./verify.sh lint` → `HARNESS_VERIFY: PASS (lint)`. Full app verified live in-browser across
-  all 4 MONITOR screens plus the new integration-warnings footer lines and FE-18 copy button.
+  all 4 MONITOR screens plus the integration-warnings footer lines and FE-18 copy button.
+  2026-09-03: confirmed the "latest version" registry was NOT a gap — it already existed
+  server-side; sent one test envelope with `sdk.version: "0.9.0"` and the footer's `SDK
+  version` line correctly rendered `0.9.0 outdated` in amber. All three buildable §3.8
+  conditions are now live-verified in every state; no code changed, archived epic amended
+  with the addendum.
 
 ## Next step
 
@@ -31,9 +36,6 @@ again (full detail in the archived epic file):
 - No time-series/history endpoint anywhere → no sparklines (Overview cards, per-host Network
   trend).
 - No SLO config → no breach-styling on Overview cards (amber-border-on-bad-trend substitutes).
-- Stale-SDK-version warning UI reads `sdk_versions[].is_outdated` correctly already but has
-  never seen real `true`/named-outdated data — the user said they're adding the "latest
-  version" registry server-side; no frontend change needed once that lands, just re-verify.
 - User Lookup's breadcrumb relative-time uses `last_seen` (server clock), not `ts_client`
   (device clock) — `user_detail()` has no per-session device timestamp, unlike Issue Detail.
 

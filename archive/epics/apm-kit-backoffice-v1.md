@@ -285,7 +285,7 @@ whether that's changed.
 | ✅ | Sidebar footer's "last event" is a live staleness signal, not just a timestamp | Kevin Hardianto | `eventStaleness()` + color-coding in `StatusFooter.tsx`; verified in-browser (green when fresh) |
 | ✅ | "Real users only" toggle present everywhere FE-22 names (Overview, Issues, Network) | Kevin Hardianto | Added to Issues/Network (were URL-readable but had no UI control — a real gap); verified in-browser on both: toggling reveals/hides the emulator-only crash and events |
 | ✅ | Issues list distinguishes "filtered too narrow" from "clean/no data" (FE-19) | Kevin Hardianto | Code review — `data.count > 0` vs `=== 0` branch, mirroring the pattern already verified live in `TopIssuesPreview` |
-| ✅ | §3.8 integration warnings: user coverage + SDK health, each with a genuine 3rd "unavailable" state (never a fake all-clear) | Kevin Hardianto | Verified in-browser against real data: "user coverage" green (0% unlinkable), "SDK health" amber (1.55% dropped > 1% threshold), "SDK version" green (up to date) — all real numbers from `GET /v1/apps/:id/integration`. The `available:false` muted branch is structurally identical to the already-live-verified "symbolication: not yet available" row; not re-exercised live this round (see decision below) |
+| ✅ | §3.8 integration warnings: user coverage + SDK health + SDK version, each with a genuine 3rd "unavailable" state (never a fake all-clear) | Kevin Hardianto | Verified in-browser against real data, all three states exercised: "user coverage" green (0% unlinkable), "SDK health" amber (1.55% dropped > 1% threshold), "SDK version" amber (`0.9.0 outdated`, after sending one test envelope with an older `sdk.version` — 2026-09-03 addendum). The `available:false` muted branch is structurally identical to the already-live-verified "symbolication: not yet available" row |
 | ✅ | FE-18 copy issue as markdown | Kevin Hardianto | Verified in-browser: button click invokes `navigator.clipboard.writeText`; this session's sandboxed preview browser denies clipboard permission (`NotAllowedError`), surfaced as "Copy failed" via the added try/catch rather than silently doing nothing — a real browser grants this from a user gesture |
 
 **Decisions**
@@ -342,15 +342,21 @@ whether that's changed.
   symbolication/last-event lines), each rendering one of three genuinely distinct states —
   unavailable (muted), healthy (green), or warning (amber) — never collapsed to two. Verified
   live: 0% unlinkable (healthy), 1.55% dropped (correctly flagged, >1% threshold), one SDK
-  version, up to date. **Stale SDK version** stays unbuilt here — the user is adding the
-  "latest version" registry server-side; the frontend's `SDK version` line already reads
-  `sdk_versions[].is_outdated` (`null` when `latest_known` is unset — explicitly not treated
-  as "up to date" per the `04` addition) and needs no further changes once real outdated data
-  exists. **Symbols not uploaded** stays Phase 3 as before — `symbolication.available` is
+  version, up to date. **Symbols not uploaded** stays Phase 3 — `symbolication.available` is
   `false` from the server itself now, not just absent from this app.
   Thresholds for "warning" (generated sessions >50%, dropped events >1%) are judgment calls —
   neither `01` nor `04` names a number, consistent with `eventStaleness()`'s thresholds
   earlier in this file.
+  **Addendum 2026-09-03:** the "latest version" registry was not a gap — it already existed
+  server-side (`LATEST_SDK_VERSIONS` in `readapi.py`); the DB just happened to contain only
+  one SDK version, so `is_outdated` had never been observed `true`. Sent one test envelope
+  with `sdk.version: "0.9.0"` via raw `POST /v1/ingest` and confirmed live: `sdk_versions[]`
+  returned a second entry (`{version: "0.9.0", latest_known: "1.0.0", is_outdated: true}`),
+  and the footer's `SDK version` line rendered `0.9.0 outdated` in amber
+  (`text-amber-400`, confirmed via computed class name) — no frontend change needed, the
+  existing `is_outdated` branch just hadn't been exercised by real data yet. All three
+  buildable §3.8 conditions (user coverage, SDK health, SDK version) are now live-verified in
+  every state that matters; symbolication correctly and permanently reports unavailable.
 - 2026-09-02 · **Shareable-URL audit** (docs/04 §4): Overview (`days`, `real_users_only`),
   Issues (`days`, `real_users_only`, `type`, `status`, `platform`, `app_version`, `sort`),
   Network (`days`, `real_users_only`, `host`, `failure_category`), Issue Detail (the path
