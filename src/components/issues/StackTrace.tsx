@@ -10,26 +10,29 @@ function Frame({ frame }: { frame: StackFrame }) {
   const symbolicated = frame.symbol_name != null
   return (
     <div
-      className={`flex gap-3 rounded px-2 py-1 ${
+      className={`flex min-w-0 gap-3 rounded px-2 py-1 ${
         frame.is_app ? 'bg-indigo-950/40 text-slate-100' : 'text-slate-500'
       }`}
     >
       <span className="w-6 shrink-0 text-right text-slate-600">{frame.index}</span>
-      <span className={frame.is_app ? 'font-medium' : ''}>{frame.object_name}</span>
-      {symbolicated ? (
-        <span className="text-slate-300">
-          {frame.symbol_name}
-          {frame.file && (
-            <span className="text-slate-500">
-              {' '}
-              · {frame.file}
-              {frame.line != null ? `:${frame.line}` : ''}
-            </span>
-          )}
-        </span>
-      ) : (
-        <span className="text-slate-600">{frame.instruction_addr}</span>
-      )}
+      <span className={`min-w-0 break-all ${frame.is_app ? 'font-medium' : ''}`}>
+        {frame.object_name}
+        {symbolicated ? (
+          <span className="text-slate-300">
+            {' '}
+            {frame.symbol_name}
+            {frame.file && (
+              <span className="text-slate-500">
+                {' '}
+                · {frame.file}
+                {frame.line != null ? `:${frame.line}` : ''}
+              </span>
+            )}
+          </span>
+        ) : (
+          <span className="text-slate-600"> {frame.instruction_addr}</span>
+        )}
+      </span>
     </div>
   )
 }

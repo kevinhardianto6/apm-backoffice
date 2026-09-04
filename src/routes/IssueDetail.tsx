@@ -65,7 +65,7 @@ export function IssueDetail() {
       </div>
 
       <div className="mt-6 grid grid-cols-2 gap-4">
-        <div className="flex flex-col gap-4">
+        <div className="flex min-w-0 flex-col gap-4">
           {issue.type === 'termination' && (
             <TerminationNotice attrs={issue.sample_event.attrs} />
           )}
@@ -77,7 +77,7 @@ export function IssueDetail() {
           />
         </div>
 
-        <div className="flex flex-col gap-4">
+        <div className="flex min-w-0 flex-col gap-4">
           <BreakdownCard title="Devices" items={issue.breakdowns.devices} />
           <BreakdownCard title="OS versions" items={issue.breakdowns.os_versions} />
           <BreakdownCard title="App versions" items={issue.breakdowns.app_versions} />
