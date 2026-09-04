@@ -1,4 +1,5 @@
-import type { StackFrame, Thread } from '../../api/types'
+import type { StackFrame } from '../../api/types'
+import { parseThreads } from '../../lib/crashAttrs'
 
 // FE-06/FE-17. Frame highlighting does NOT wait for symbolication (01 §4.3.1): `is_app`
 // is set by the SDK at capture time, so "this frame is our code" is known from the first
@@ -33,7 +34,7 @@ function Frame({ frame }: { frame: StackFrame }) {
 }
 
 export function StackTrace({ attrs }: { attrs: Record<string, unknown> }) {
-  const threads = attrs.threads as Thread[] | undefined
+  const threads = parseThreads(attrs.threads)
   const name = attrs.name as string | undefined
   const reason = attrs.reason as string | undefined
   const crashType = attrs.crash_type as string | undefined
@@ -53,25 +54,31 @@ export function StackTrace({ attrs }: { attrs: Record<string, unknown> }) {
           {reason && <span className="text-slate-500"> · {reason}</span>}
         </div>
 
-        {threads && threads.length > 0 ? (
+        {threads.length > 0 ? (
           <div className="flex flex-col gap-4">
-            {threads.map((thread) => (
-              <div key={thread.index}>
-                <div className="mb-1 text-slate-500">
-                  Thread {thread.index} · {thread.name}
-                  {thread.crashed && <span className="ml-2 text-red-400">crashed</span>}
-                </div>
-                {thread.frames.length > 0 ? (
-                  <div className="flex flex-col gap-0.5">
-                    {thread.frames.map((frame) => (
-                      <Frame key={frame.index} frame={frame} />
-                    ))}
+            {threads.map((thread, i) => {
+              const frames = Array.isArray(thread?.frames) ? thread.frames : []
+              return (
+                <div key={i}>
+                  <div className="mb-1 text-slate-500">
+                    Thread {thread?.index ?? i} · {thread?.name}
+                    {thread?.crashed && <span className="ml-2 text-red-400">crashed</span>}
                   </div>
-                ) : (
-                  <div className="pl-3 text-slate-600">no frames on this thread</div>
-                )}
-              </div>
-            ))}
+                  {frames.length > 0 ? (
+                    <div className="flex flex-col gap-0.5">
+                      {/* Position in the array, not `frame.index` — at least one real
+                          payload sends `index: 0` for every frame in a thread, which
+                          would collide as a React key. */}
+                      {frames.map((frame: StackFrame, fi: number) => (
+                        <Frame key={fi} frame={frame} />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="pl-3 text-slate-600">no frames on this thread</div>
+                  )}
+                </div>
+              )
+            })}
           </div>
         ) : (
           <div className="text-slate-500">

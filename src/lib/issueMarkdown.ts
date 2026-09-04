@@ -1,4 +1,5 @@
-import type { IssueDetail, StackFrame, Thread } from '../api/types'
+import type { IssueDetail, StackFrame } from '../api/types'
+import { parseThreads } from './crashAttrs'
 import { relativeTime } from './time'
 
 // FE-18: a plain-text/markdown summary an engineer can paste into a ticket or chat
@@ -34,13 +35,13 @@ export function issueToMarkdown(issue: IssueDetail): string {
   }
 
   if (issue.type === 'crash') {
-    const threads = attrs.threads as Thread[] | undefined
+    const threads = parseThreads(attrs.threads)
     lines.push('**Stack trace** (not symbolicated)')
     lines.push('```')
-    if (threads && threads.length > 0) {
+    if (threads.length > 0) {
       for (const thread of threads) {
         lines.push(`Thread ${thread.index}${thread.crashed ? ' (crashed)' : ''} · ${thread.name}`)
-        for (const frame of thread.frames as StackFrame[]) {
+        for (const frame of (thread.frames ?? []) as StackFrame[]) {
           const loc = frame.symbol_name
             ? `${frame.symbol_name}${frame.file ? ` (${frame.file}:${frame.line})` : ''}`
             : frame.instruction_addr
